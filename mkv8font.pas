@@ -174,7 +174,10 @@ var
     A, B : Byte;
     V : String;
     Block : TBlock;
+    SA, SB, HA, HB, M : String;
+    AutoSkip : boolean;
 begin
+    AutoSkip := false;
     FileMode:= 0;
     Assign(F, AFileName);
     Reset(F,1);
@@ -200,17 +203,52 @@ begin
                 if LG <> G then
                     R := GetROMFontPtr(H, G = 1, False);
                 LG := G;
+                SA := '';
+                SB := '';
+                HA := '';
+                HB := '';
+                M := '';
                 for L := 0 to H - 1 do
                     begin
                         A:=Mem[Seg(R^):Ofs(R^) + (N * H) + L];
                         B:=Mem[Seg(P^):Ofs(P^) + (G * $80 * H) + (N * H) + L];
                         PrintDots(A);
+                        if (SA <> '') or (A <> 0) then begin
+                            if A = 0 then
+                                HA := HA + ' '
+                            else begin
+                                SA := SA + HA + Chr(A);
+                                HA := '';
+                            end;
+                        end;
+
                         Write('  ');
                         PrintDots(B);
+                        if (SB <> '') or (B <> 0) then begin
+                            if B = 0 then
+                                HB := HB + ' '
+                            else begin
+                                SB := SB + HB + Chr(B);
+                                HB := '';
+                            end;
+                        end;
+
                         WriteLn;
                     end;
-                 Write('Character #', G * $80 + N, ', Approve (y/N/q/p)?');
-                 ReadLn(V);
+                  if (not AutoSkip) or (SA <> SB) then begin
+                    if (SA = SB) then begin
+                        WriteLn('Probable match, use A option to automatically reject those.');
+                        M := ',A';
+                    end;
+                    Write('Character #', G * $80 + N, ', Approve (y/N/q/p', M, ')?');
+                    ReadLn(V);
+                    if (V = 'a') or (V = 'A') then begin
+                        AutoSkip := True;
+                        V := 'N';
+                    end;
+                 end else begin
+                    V := 'N';
+                 end;
                  Val(V, T, E);
                  if E = 0 then
                     I := T
@@ -234,6 +272,10 @@ begin
             ReadLn(V);
             SetRomFont(H);
         until (V <> 'n') or (V <> 'N');
+        if (V = 'q') or (V = 'Q') then begin
+            WriteLn('Aborted.');
+            Halt(1);
+        end;
     end;
     Write('Text Comment?');
     ReadLn(V);
