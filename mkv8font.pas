@@ -175,9 +175,10 @@ var
     V : String;
     Block : TBlock;
     SA, SB, HA, HB, M : String;
-    AutoSkip : boolean;
+    AutoSkip, AutoAll, Exact : boolean;
 begin
     AutoSkip := false;
+    AutoAll := false;
     FileMode:= 0;
     Assign(F, AFileName);
     Reset(F,1);
@@ -208,10 +209,12 @@ begin
                 HA := '';
                 HB := '';
                 M := '';
+                Exact := True;
                 for L := 0 to H - 1 do
                     begin
                         A:=Mem[Seg(R^):Ofs(R^) + (N * H) + L];
                         B:=Mem[Seg(P^):Ofs(P^) + (G * $80 * H) + (N * H) + L];
+                        Exact := Exact and (A = B);
                         PrintDots(A);
                         if (SA <> '') or (A <> 0) then begin
                             if A = 0 then
@@ -235,16 +238,26 @@ begin
 
                         WriteLn;
                     end;
+                  if Exact then begin
+                    V := 'N';
+                  end else
+                  if AutoAll then begin
+                  	V := 'Y';
+                  end else
                   if (not AutoSkip) or (SA <> SB) then begin
                     if (SA = SB) then begin
                         WriteLn('Probable match, use A option to automatically reject those.');
-                        M := ',A';
+                        M := ',A,I';
                     end;
-                    Write('Character #', G * $80 + N, ', Approve (y/N/q/p', M, ')?');
+                    Write('Character #', G * $80 + N, ', Approve (y/N/q/p', M, ',#)?');
                     ReadLn(V);
                     if (V = 'a') or (V = 'A') then begin
                         AutoSkip := True;
                         V := 'N';
+                    end else
+                    if (V = 'i') or (V = 'i') then begin
+                        AutoAll := True;
+                        V := 'Y';
                     end;
                  end else begin
                     V := 'N';
@@ -316,6 +329,27 @@ begin
     Close(F);
 end;
 
+procedure ShowHelp;
 begin
-    ConvertFont (ParamStr(1));
+	WriteLn('usage: mkV8font [bitmap font]');
+	WriteLn('convert a standard bitmap font to a v8f font supplement file');
+	WriteLn;
+	WriteLn('During conversion you have several "Approval" options');
+	WriteLn;
+	WriteLn('   y - accept character and include it in the v8f file');
+	WriteLn('   n - reject character and exclude include it from the v8f file');
+	WriteLn('   q - abort conversion');
+	WriteLn('   p - decide later');
+	WriteLn;
+	WriteLn('   a - automatically reject all probable matches (same but shifted up or down)');
+	WriteLn('   i - automatically include everything except exact matches');
+	WriteLn;
+	WriteLn('   exact matches are always automatically rejected');
+end;
+
+begin
+	if (ParamStr(1) = '/h') or (ParamStr(1) = '/?') or (ParamCOunt = 0) then
+		ShowHelp
+	else
+	    ConvertFont (ParamStr(1));
 end.
